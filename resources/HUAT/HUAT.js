@@ -1,4 +1,4 @@
-// 文件: school.js - 修复节次错误
+// 文件: HUAT1_fixed_shift.js - 修复节次偏移 + 季节时间选择 (夏季/秋季)
 // ==================== 验证函数 ====================
 function validateDate(dateStr) {
     if (!dateStr || dateStr.trim().length === 0) {
@@ -29,7 +29,7 @@ function validateName(name) {
 }
 // ==================== 课表数据提取函数 ====================
 /**
- * 从页面提取课表数据 - 修复节次错误
+ * 从页面提取课表数据 - 修复3-4和7-8节偏移
  */
 function extractCourseData() {
     console.log("开始提取湖北汽车工业学院课表数据...");
@@ -53,7 +53,20 @@ function extractCourseData() {
             const cell = cells[dayIndex];
             
             // 星期映射修正：第1列=周一(0), 第2列=周二(1), ... 第7列=周日(6)
-            const day = dayIndex - 1;
+            let day = dayIndex - 1;
+            
+            // 修复3-4节和7-8节的偏移
+            // 3-4节在行索引2-3，7-8节在行索引6-7
+            if ((rowIndex >= 2 && rowIndex <= 3) || (rowIndex >= 6 && rowIndex <= 7)) {
+                // 将周一向后推一天
+                if (day === 0) day = 1;      // 周一 -> 周二
+                else if (day === 1) day = 2; // 周二 -> 周三
+                else if (day === 2) day = 3; // 周三 -> 周四
+                else if (day === 3) day = 4; // 周四 -> 周五
+                else if (day === 4) day = 5; // 周五 -> 周六
+                else if (day === 5) day = 6; // 周六 -> 周日
+                // 周日(6)保持不变
+            }
             
             // 查找单元格内的所有课程块 - 使用更通用的选择器
             const courseBlocks = cell.querySelectorAll('[class*="theory"], .theory, [class*="course"], div[style*="background"]');
@@ -90,7 +103,18 @@ function extractCourseData() {
                     
                     if (dayIndex >= 1 && dayIndex <= 7) {
                         // 星期映射修正：第1列=周一(0), 第2列=周二(1), ... 第7列=周日(6)
-                        const day = dayIndex - 1;
+                        let day = dayIndex - 1;
+                        
+                        // 修复3-4节和7-8节的偏移
+                        if ((rowIndex >= 2 && rowIndex <= 3) || (rowIndex >= 6 && rowIndex <= 7)) {
+                            if (day === 0) day = 1;
+                            else if (day === 1) day = 2;
+                            else if (day === 2) day = 3;
+                            else if (day === 3) day = 4;
+                            else if (day === 4) day = 5;
+                            else if (day === 5) day = 6;
+                        }
+                        
                         const course = parseCourseBlock(element, day, rowIndex);
                         if (course) {
                             courses.push(course);
@@ -202,7 +226,7 @@ function parseCourseBlock(block, day, rowIndex) {
         position = extractClassroom(block.innerText);
     }
     
-    // 节次映射彻底修正：按行索引重新定义startSection和endSection
+    // 节次映射修正：按行索引重新定义startSection和endSection
     let startSection, endSection;
     switch(rowIndex) {
         case 0: // 第1行：第1节
@@ -419,6 +443,55 @@ function extractSemesterInfo() {
         semesterTotalWeeks: 20
     };
 }
+
+// ========== 根据季节获取时间段（夏季/秋季） ==========
+/**
+ * 根据季节返回对应的时间段数组
+ * @param {string} season - "summer" 或 "autumn"
+ * @returns {Array} 时间段对象数组
+ */
+function getSeasonTimeSlots(season) {
+    // 上午固定时间（夏秋通用）
+    const morning_classes = [
+        {"number": 1, "startTime": "08:10", "endTime": "08:55"},
+        {"number": 2, "startTime": "09:00", "endTime": "09:45"},
+        {"number": 3, "startTime": "10:05", "endTime": "10:50"},
+        {"number": 4, "startTime": "10:55", "endTime": "11:40"}
+    ];
+    
+    // 夏季下午/晚上时间
+    const summer_afternoon_evening = [
+        {"number": 5, "startTime": "14:30", "endTime": "15:15"},
+        {"number": 6, "startTime": "15:20", "endTime": "16:05"},
+        {"number": 7, "startTime": "16:25", "endTime": "17:10"},
+        {"number": 8, "startTime": "17:15", "endTime": "18:00"},
+        {"number": 9, "startTime": "18:45", "endTime": "19:30"},
+        {"number": 10, "startTime": "19:35", "endTime": "20:20"},
+        {"number": 11, "startTime": "20:25", "endTime": "21:10"}
+    ];
+    
+    // 秋季下午/晚上时间
+    const autumn_afternoon_evening = [
+        {"number": 5, "startTime": "14:00", "endTime": "14:45"},
+        {"number": 6, "startTime": "14:50", "endTime": "15:35"},
+        {"number": 7, "startTime": "15:55", "endTime": "16:40"},
+        {"number": 8, "startTime": "16:45", "endTime": "17:30"},
+        {"number": 9, "startTime": "18:15", "endTime": "19:00"},
+        {"number": 10, "startTime": "19:05", "endTime": "19:50"},
+        {"number": 11, "startTime": "19:55", "endTime": "20:40"}
+    ];
+
+    if (season === 'summer') {
+        return morning_classes.concat(summer_afternoon_evening);
+    } else if (season === 'autumn') {
+        return morning_classes.concat(autumn_afternoon_evening);
+    } else {
+        // 默认返回夏季（兼容旧调用）
+        console.warn("未知季节参数，使用夏季时间");
+        return morning_classes.concat(summer_afternoon_evening);
+    }
+}
+
 // ==================== 弹窗和导入函数 ====================
 async function demoAlert() {
     try {
@@ -451,43 +524,129 @@ async function demoPrompt() {
         return "2026-03-01";
     }
 }
+
 /**
- * 导入预设时间段 - 新增函数
- * 用于导入测试用的11个时间段（每个时间段1分钟）
+ * 导入时间段 - 让用户选择夏季或秋季
+ * 修复：使用更可靠的方式来处理两个选项
  */
 async function importPresetTimeSlots() {
     console.log("正在准备预设时间段数据...");
-    const presetTimeSlots = [
-        { "number": 1, "startTime": "08:10", "endTime": "08:55" },
-        { "number": 2, "startTime": "09:00", "endTime": "09:45" },
-        { "number": 3, "startTime": "10:05", "endTime": "10:50" },
-        { "number": 4, "startTime": "10:55", "endTime": "11:40" },
-        { "number": 5, "startTime": "14:30", "endTime": "15:15" },
-        { "number": 6, "startTime": "15:20", "endTime": "16:05" },
-        { "number": 7, "startTime": "16:25", "endTime": "17:10" },
-        { "number": 8, "startTime": "17:15", "endTime": "18:00" },
-        { "number": 9, "startTime": "18:45", "endTime": "19:30" },
-        { "number": 10, "startTime": "19:35", "endTime": "20:20" },
-        { "number": 11, "startTime": "20:25", "endTime": "21:10" }
-    ];
+    
+    // 修复：使用showConfirmDialog而不是showAlert来确保两个按钮都显示
     try {
-        console.log("正在尝试导入预设时间段...");
-        const result = await window.AndroidBridgePromise.savePresetTimeSlots(JSON.stringify(presetTimeSlots));
-        if (result === true) {
-            console.log("预设时间段导入成功！");
-            window.AndroidBridge.showToast("测试时间段导入成功！");
-            return true;
-        } else {
-            console.log("预设时间段导入未成功，结果：" + result);
-            window.AndroidBridge.showToast("测试时间段导入失败，请查看日志。");
-            return false;
+        // 尝试使用showConfirmDialog（如果有的话）
+        if (window.AndroidBridgePromise && typeof window.AndroidBridgePromise.showConfirmDialog === 'function') {
+            const seasonChoice = await window.AndroidBridgePromise.showConfirmDialog(
+                "⏰ 选择作息时间",
+                "请根据当前学期选择作息时间：\n\n🌞 夏季（5月1日-9月30日）\n🍂 秋季（10月1日-次年4月30日）",
+                "夏季",
+                "秋季"
+            );
+            
+            // showConfirmDialog 点击左侧按钮返回 true，点击右侧按钮返回 false
+            let season = seasonChoice === true ? 'summer' : 'autumn';
+            
+            // 获取对应季节的时间段
+            const presetTimeSlots = getSeasonTimeSlots(season);
+            console.log(`选择的季节: ${season}，时间段:`, presetTimeSlots);
+            
+            // 导入时间段
+            const result = await window.AndroidBridgePromise.savePresetTimeSlots(JSON.stringify(presetTimeSlots));
+            if (result === true) {
+                console.log("预设时间段导入成功！");
+                window.AndroidBridge.showToast(`✅ ${season === 'summer' ? '夏季' : '秋季'}时间段导入成功！`);
+                return true;
+            } else {
+                console.log("预设时间段导入未成功，结果：" + result);
+                window.AndroidBridge.showToast("❌ 时间段导入失败，请查看日志。");
+                return false;
+            }
+        } 
+        // 使用showAlert但确保两个按钮都显示
+        else {
+            // 方法1：尝试使用showAlert两个按钮 - 修复按钮显示问题
+            // 注意：有些AndroidBridge实现中，showAlert的第三个参数是左侧按钮，第四个参数是右侧按钮
+            // 确保两个按钮文本都不为空
+            const seasonChoice = await window.AndroidBridgePromise.showAlert(
+                "⏰ 选择作息时间",
+                "请根据当前学期选择作息时间：\n\n🌞 夏季（5月1日-9月30日）\n🍂 秋季（10月1日-次年4月30日）",
+                "夏季",  // 左侧按钮
+                "秋季"   // 右侧按钮
+            );
+            
+            // 根据返回值判断用户点击了哪个按钮
+            // showAlert 点击左侧按钮返回 true，点击右侧按钮返回 false
+            let season = 'summer';
+            
+            // 更精确地判断返回值
+            if (seasonChoice === true || seasonChoice === "true" || seasonChoice === 1) {
+                season = 'summer';
+                console.log("用户选择了夏季");
+            } else if (seasonChoice === false || seasonChoice === "false" || seasonChoice === 0) {
+                season = 'autumn';
+                console.log("用户选择了秋季");
+            } else if (typeof seasonChoice === 'string') {
+                // 如果返回的是按钮文本
+                if (seasonChoice === '夏季') {
+                    season = 'summer';
+                } else {
+                    season = 'autumn';
+                }
+            }
+            
+            // 获取对应季节的时间段
+            const presetTimeSlots = getSeasonTimeSlots(season);
+            console.log(`选择的季节: ${season}，时间段:`, presetTimeSlots);
+            
+            // 导入时间段
+            const result = await window.AndroidBridgePromise.savePresetTimeSlots(JSON.stringify(presetTimeSlots));
+            if (result === true) {
+                console.log("预设时间段导入成功！");
+                window.AndroidBridge.showToast(`✅ ${season === 'summer' ? '夏季' : '秋季'}时间段导入成功！`);
+                return true;
+            } else {
+                console.log("预设时间段导入未成功，结果：" + result);
+                window.AndroidBridge.showToast("❌ 时间段导入失败，请查看日志。");
+                return false;
+            }
         }
     } catch (error) {
         console.error("导入时间段时发生错误:", error);
-        window.AndroidBridge.showToast("导入时间段失败: " + error.message);
-        return false;
+        
+        // 方法2：如果两个按钮的方法失败，尝试使用showPrompt让用户输入
+        try {
+            console.log("尝试使用备用方法选择季节...");
+            const seasonInput = await window.AndroidBridgePromise.showPrompt(
+                "⏰ 选择作息时间",
+                "请输入季节（输入 1 选择夏季，输入 2 选择秋季）：\n\n1 - 夏季 (5月1日-9月30日)\n2 - 秋季 (10月1日-次年4月30日)",
+                "1"
+            );
+            
+            let season = 'summer';
+            if (seasonInput === '2') {
+                season = 'autumn';
+            }
+            
+            const presetTimeSlots = getSeasonTimeSlots(season);
+            const result = await window.AndroidBridgePromise.savePresetTimeSlots(JSON.stringify(presetTimeSlots));
+            
+            if (result === true) {
+                window.AndroidBridge.showToast(`✅ ${season === 'summer' ? '夏季' : '秋季'}时间段导入成功！`);
+                return true;
+            }
+        } catch (secondError) {
+            console.error("备用方法也失败:", secondError);
+            window.AndroidBridge.showToast("导入时间段失败，使用默认夏季时间");
+            
+            // 方法3：使用默认夏季
+            const defaultTimeSlots = getSeasonTimeSlots('summer');
+            await window.AndroidBridgePromise.savePresetTimeSlots(JSON.stringify(defaultTimeSlots));
+            window.AndroidBridge.showToast("✅ 默认夏季时间段导入成功");
+            return true;
+        }
     }
 }
+
 async function importSchedule() {
     try {
         AndroidBridge.showToast("正在提取课表数据...");
@@ -547,6 +706,7 @@ async function importSchedule() {
         return false;
     }
 }
+
 async function runAllDemosSequentially() {
     AndroidBridge.showToast("🚀 课表导入助手启动...");
     
@@ -570,26 +730,21 @@ async function runAllDemosSequentially() {
         return;
     }
     
-    // 可以选择是否导入时间段
-    const importTimeSlots = await window.AndroidBridgePromise.showAlert(
-        "⏰ 导入时间段",
-        "是否要导入预设的时间段数据？\n",
-        "导入",
-        "跳过"
-    );
+    // 导入时间段（带季节选择：夏季/秋季）
+    await importPresetTimeSlots();
     
-    if (importTimeSlots) {
-        await importPresetTimeSlots();
-    }
-    
+    // 导入课表
     await importSchedule();
     
     AndroidBridge.notifyTaskCompletion();
 }
+
 // 导出函数
 window.validateDate = validateDate;
 window.validateName = validateName;
 window.extractCourseData = extractCourseData;
 window.importPresetTimeSlots = importPresetTimeSlots;
+window.getSeasonTimeSlots = getSeasonTimeSlots;
+
 // 启动
 runAllDemosSequentially();
