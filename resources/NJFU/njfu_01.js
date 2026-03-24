@@ -126,8 +126,11 @@ function parseCourseBlock(blockHtml, fallbackDay) {
     const lines = readLineTexts(tempDiv);
     if (!lines.length) return null;
 
-    const name = extractCourseName(lines);
+    let name = extractCourseName(lines);
     const teacher = tempDiv.querySelector('font[title="教师"]')?.innerText.trim() || "未知";
+    if (teacher && name && name !== teacher && name.endsWith(teacher)) {
+        name = name.slice(0, -teacher.length).trim();
+    }
     const positionRaw = tempDiv.querySelector('font[title="教室"]')?.innerText.trim() || "待定";
     const building = tempDiv.querySelector('font[title="教学楼"]')?.innerText.trim()
         || tempDiv.querySelector('font[name="jxlmc"]')?.innerText.trim()
