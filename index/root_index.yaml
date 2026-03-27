@@ -322,3 +322,8 @@ schools:
     name: "南京林业大学"
     initial: "N"
     resource_folder: "NJFU"
+
+  - id: "GUIT"
+    name: "桂林信息科技学院"
+    initial: "G"
+    resource_folder: "GUIT"
