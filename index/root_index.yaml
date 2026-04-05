@@ -347,3 +347,8 @@ schools:
     name: "江苏大学"
     initial: "J"
     resource_folder: "UJS"
+
+  - id: "YIBINU"
+    name: "宜宾学院"
+    initial: "Y"
+    resource_folder: "YIBINU"
