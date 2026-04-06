@@ -1,0 +1,14 @@
+schoolName: "大连大学"
+adapterId: "dlu_v1"
+importUrl: "https://webvpn.dlu.edu.cn/login"
+assetJsPath: "dlu.js"
+category: "BACHELOR"
+
+adapters:
+  - adapter_id: "dlu_v1"
+    adapter_name: "大连大学教务系统"
+    category: "BACHELOR_AND_ASSOCIATE"
+    asset_js_path: "dlu.js"
+    import_url: "https://webvpn.dlu.edu.cn/login"
+    maintainer: "pending"
+    description: "大连大学正方教务系统课表导入"
