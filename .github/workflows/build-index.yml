@@ -30,37 +30,21 @@ jobs:
         # 路径：scripts/build_data.py
         run: python scripts/build_data.py 
       
-      - name: 发布到无历史的孤立分支
+         - name: 提交到 main 分支
         run: |
-          ASSET_BRANCH="index-pb-release"  # 目标孤立分支名称，您可以自定义
-          
           git config user.name "GitHub Actions Bot"
-          # 使用官方 bot 邮箱，保证提交标识清晰
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
-          # --- 检查文件 ---
           if [ ! -f school_index.pb ]; then
-            echo "错误：未找到生成的 school_index.pb 文件。请检查 build_data.py 的输出路径。"
+            echo "错误：未找到生成的 school_index.pb 文件"
             exit 1
           fi
 
-          # --- 关键步骤：创建和切换到孤立分支 ---
-          # --orphan 选项创建的分支是完全没有历史记录的
-          git checkout --orphan $ASSET_BRANCH
-          
-          # 清除工作目录中的所有文件，确保分支是干净的
-          git rm -rf .
-          
-          # --- 添加资产文件 ---
-          # 默认情况下 school_index.pb 在根目录，直接 add
           git add school_index.pb
-
-          # --- 提交更改 ---
-          # [skip ci] 标签可以防止这个提交再次触发 CI/CD 循环
-          git commit -m "Release: Latest school_index.pb $(date +'%Y%m%d%H%M%S') [skip ci]"
-          
-          # --- 强制推送到远程分支 ---
-          # 使用 --force 覆盖远程分支的历史记录，确保每次都是最新的、单一的提交
-          git push --force origin $ASSET_BRANCH
-          
-          echo "成功将 school_index.pb 发布到 $ASSET_BRANCH 分支，仅保留一个最新的提交。"
+          # 检查是否有文件变动，有则提交并推送
+          if git diff --cached --quiet; then
+            echo "school_index.pb 没有变化，无需提交"
+          else
+            git commit -m "chore: auto-generate school_index.pb [skip ci]"
+            git push origin main
+          fi
