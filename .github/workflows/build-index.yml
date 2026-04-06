@@ -1,6 +1,9 @@
 name: 生成 Protobuf 数据索引
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -12,7 +15,6 @@ jobs:
 
     steps:
       - name: 检出代码
-        # 将整个仓库代码检出到 runner 机器上
         uses: actions/checkout@v4
 
       - name: 设置 Python 环境
@@ -26,22 +28,20 @@ jobs:
           pip install pyyaml protobuf
       
       - name: 执行数据构建脚本
-        # 脚本将生成 school_index.pb 到仓库根目录
-        # 路径：scripts/build_data.py
         run: python scripts/build_data.py 
       
-         - name: 提交到 main 分支
+      - name: 发布到当前分支
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
           if [ ! -f school_index.pb ]; then
-            echo "错误：未找到生成的 school_index.pb 文件"
+            echo "错误：未找到生成的 school_index.pb 文件。请检查 build_data.py 的输出路径。"
             exit 1
           fi
 
           git add school_index.pb
-          # 检查是否有文件变动，有则提交并推送
+          
           if git diff --cached --quiet; then
             echo "school_index.pb 没有变化，无需提交"
           else
