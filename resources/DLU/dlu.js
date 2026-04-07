@@ -217,7 +217,7 @@ async function saveCourses(parsedCourses) {
     }
 }
 
-// 大连大学统一作息时间 (以星期一至星期五为准，拾光课程表目前不支持单独为周末设置不同时间)
+// 大连大学统一作息时间 (星期一至星期五)
 const TimeSlots = [
     { number: 1, startTime: "08:10", endTime: "08:55" },
     { number: 2, startTime: "09:00", endTime: "09:45" },
@@ -230,6 +230,43 @@ const TimeSlots = [
     { number: 9, startTime: "16:55", endTime: "17:40" },
     { number: 10, startTime: "17:45", endTime: "18:30" }
 ];
+
+// 大连大学周末作息时间 (星期六、星期日)
+const WeekendTimeSlots = [
+    { number: 1, startTime: "08:45", endTime: "09:30" },
+    { number: 2, startTime: "09:40", endTime: "10:25" },
+    { number: 3, startTime: "10:35", endTime: "11:20" },
+    { number: 5, startTime: "13:10", endTime: "13:55" },
+    { number: 6, startTime: "14:00", endTime: "14:45" },
+    { number: 7, startTime: "14:50", endTime: "15:35" }
+];
+
+function applyCustomTimeToCourses(courses) {
+    let customizedCount = 0;
+    const updatedCourses = courses.map((course) => {
+        // 如果是周末的课程 (星期六或星期日)
+        if (course.day === 6 || course.day === 7) {
+            const startSlot = WeekendTimeSlots.find(slot => slot.number === course.startSection);
+            const endSlot = WeekendTimeSlots.find(slot => slot.number === course.endSection);
+
+            if (startSlot && endSlot) {
+                customizedCount++;
+                return {
+                    ...course,
+                    isCustomTime: true,
+                    customStartTime: startSlot.startTime,
+                    customEndTime: endSlot.endTime,
+                };
+            } else {
+                console.warn(`JS: 周末课程 ${course.name} 的节次(${course.startSection}-${course.endSection})未命中自定义时间映射，回退为普通节次。`);
+            }
+        }
+        return course;
+    });
+
+    console.log(`JS: 周末自定义时间处理完成，命中 ${customizedCount} 门课程。`);
+    return updatedCourses;
+}
 
 async function importPresetTimeSlots(timeSlots) {
     console.log(`JS: 准备导入 ${timeSlots.length} 个预设时间段。`);
@@ -274,7 +311,10 @@ async function runImportFlow() {
     if (result === null) {
         return;
     }
-    const { courses } = result;
+    let { courses } = result;
+
+    // 对周末的课程应用自定义时间
+    courses = applyCustomTimeToCourses(courses);
 
     const saveResult = await saveCourses(courses);
     if (!saveResult) {
