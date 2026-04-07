@@ -353,7 +353,7 @@ schools:
     initial: "Y"
     resource_folder: "YIBINU"
 
-  - id: "dlu"
+  - id: "DLU"
     name: "大连大学"
     initial: "D"
     resource_folder: "DLU"
