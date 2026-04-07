@@ -217,6 +217,37 @@ async function saveCourses(parsedCourses) {
     }
 }
 
+// 大连大学统一作息时间 (以星期一至星期五为准，拾光课程表目前不支持单独为周末设置不同时间)
+const TimeSlots = [
+    { number: 1, startTime: "08:10", endTime: "08:55" },
+    { number: 2, startTime: "09:00", endTime: "09:45" },
+    { number: 3, startTime: "10:00", endTime: "10:45" },
+    { number: 4, startTime: "10:50", endTime: "11:35" },
+    { number: 5, startTime: "13:15", endTime: "14:00" },
+    { number: 6, startTime: "14:05", endTime: "14:50" },
+    { number: 7, startTime: "15:05", endTime: "15:50" },
+    { number: 8, startTime: "15:55", endTime: "16:40" },
+    { number: 9, startTime: "16:55", endTime: "17:40" },
+    { number: 10, startTime: "17:45", endTime: "18:30" }
+];
+
+async function importPresetTimeSlots(timeSlots) {
+    console.log(`JS: 准备导入 ${timeSlots.length} 个预设时间段。`);
+
+    if (timeSlots.length > 0) {
+        AndroidBridge.showToast(`正在导入 ${timeSlots.length} 个预设时间段...`);
+        try {
+            await window.AndroidBridgePromise.savePresetTimeSlots(JSON.stringify(timeSlots));
+            console.log("JS: 预设时间段导入成功。");
+        } catch (error) {
+            AndroidBridge.showToast("导入时间段失败: " + error.message);
+            console.error('JS: Save Time Slots Error:', error);
+        }
+    } else {
+        console.warn("JS: 警告：传入时间段为空，未导入时间段信息。");
+    }
+}
+
 /**
  * 导入流程入口
  */
@@ -250,7 +281,10 @@ async function runImportFlow() {
         return;
     }
 
-    AndroidBridge.showToast(`课程导入成功，共导入 ${courses.length} 门课程！`);
+    // 导入预设作息时间
+    await importPresetTimeSlots(TimeSlots);
+
+    AndroidBridge.showToast(`课程及作息时间导入成功，共导入 ${courses.length} 门课程！`);
     AndroidBridge.notifyTaskCompletion();
 }
 
